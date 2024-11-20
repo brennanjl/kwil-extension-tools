@@ -1,0 +1,20 @@
+database staking;
+
+table stake_events {
+    id uuid primary,
+    isStake bool not null, // true for stake, false for unstake
+    amount uint256 not null,
+    height int not null,
+    wallet text not null,
+    #height_idx index(height)
+}
+
+
+// height_totals tracks the total amount of stake in the system at a given height
+table height_totals {}
+
+procedure register_stake_event($id uuid, $isStake bool, $amount uint256, $height int, $wallet text) public {
+    insert into stake_events(id, isStake, amount, height, wallet) values($id, $isStake, $amount, $height, $wallet);
+}
+
+procedure get_stake_events() public {}

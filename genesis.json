@@ -1,0 +1,30 @@
+{
+    "genesis_time": "2023-08-28T22:24:04.513472Z",
+    "chain_id": "kwil-chain-RQMl2F",
+    "initial_height": "0",
+    "consensus_params": {
+      "block": {
+        "max_bytes": "1000000000000",
+        "max_gas": "-1"
+      },
+      "validator": {
+        "pub_key_types": [
+          "ed25519"
+        ],
+        "join_expiry": "86400"
+      },
+      "version": {
+        "app": "0"
+      },
+      "without_gas_costs": true,
+      "without_nonces": false
+    },
+    "validators": [
+      {
+        "pub_key": "71d79c64ffb46e8f6c36f1429066a9d92f6adf5bbe546204e40ec5559478b6aa",
+        "power": 1,
+        "name": "validator-0"
+      }
+    ],
+    "app_hash": "4F8735846B8CFB01A277430A392DD3DB7B66510C358C5F4A2AF88A348CB20A62"
+  }

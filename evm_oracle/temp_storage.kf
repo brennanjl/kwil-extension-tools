@@ -1,0 +1,54 @@
+database temp_storage;
+
+// data stores all unprocessed data.
+table data {
+    height int primary key,
+    previous_height int not null default(-1),
+    data blob not null
+}
+
+// table that stores a single row with the last processed height.
+table last_processed {
+    height int primary key
+}
+
+//select * from ds_xa41b5e4090650d849b7e4c08fd66cf398f258ad78e2ee677150c2305.data;
+
+// init initializes the last_processed table.
+procedure init() public owner {
+    for $r in SELECT height FROM last_processed {
+        error('already initialized');
+    }
+
+    INSERT INTO last_processed (height)
+    VALUES (-1);
+}
+
+// store stores the data at the given height.
+procedure store($height int, $prev int, $data blob) public owner {
+    INSERT INTO data (height, previous_height, data)
+    VALUES ($height, $prev, $data);
+}
+
+// get_and_delete_ready returns the height and data of each unprocessed data, in order of height asc.
+// It only returns continuous heights, meaning that if 3 is the last processed height, it will return 4, 5, 6, etc.,
+// but if 4,5,6,8 are stored, it will only return 4,5,6. It will set the last_processed height to the last processed height.
+procedure get_and_delete_ready() public owner returns table(height int, data blob) {
+    $last_processed_height int;
+    for $r in SELECT height FROM last_processed {
+        $last_processed_height := $r.height;
+    }
+
+
+    for $r2 in SELECT height, previous_height, data FROM data WHERE height > $last_processed_height ORDER BY height ASC {
+        if $r2.previous_height != $last_processed_height {
+            update last_processed set height = $last_processed_height;
+            break;
+        }
+
+        DELETE FROM data WHERE height = $r2.height;
+        $last_processed_height := $r2.height;
+
+        return next $r2.height, $r2.data;
+    }
+}
