@@ -4,4 +4,6 @@ The EVM Oracle automates event listening for EVM chains. It allows developers to
 
 ## Creating A Custom Implementation
 
+Use the `RegisterEthListener` function provided by this package.
+
 ## Node Configuration
