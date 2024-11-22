@@ -31,18 +31,26 @@ func init() {
 // returns a genesis hook that deploys the temp_storage schema, which is used
 // for ordering incoming events
 func (e EthListener) genesisHook() hooks.GenesisHook {
-	return func(ctx context.Context, app *common.App) error {
-		err := app.Engine.CreateDataset(ctx, app.DB, tempStorageSchema, &common.TransactionData{
-			Signer: []byte(e.ExtensionName),
-			Caller: e.ExtensionName,
-			TxID:   e.uniqueName("temp_storage_deployment"),
-		})
+	return func(ctx context.Context, app *common.App, chain *common.ChainContext) error {
+		kwilBlock := &common.BlockContext{
+			ChainContext: chain,
+			Height:       0,
+		}
+
+		err := app.Engine.CreateDataset(&common.TxContext{
+			Ctx:           ctx,
+			BlockContext:  kwilBlock,
+			TxID:          e.uniqueName("temp_storage_schema"),
+			Signer:        []byte(e.ExtensionName),
+			Caller:        e.ExtensionName,
+			Authenticator: "eth_listener_extension",
+		}, app.DB, tempStorageSchema)
 		if err != nil {
 			return err
 		}
 
 		// need to insert the original data into the temp storage
-		_, err = e.tempStorageProc(ctx, app, "init", nil)
+		_, err = e.tempStorageProc(ctx, kwilBlock, app, "init", nil)
 		return err
 	}
 }
@@ -55,8 +63,8 @@ func (e EthListener) uniqueName(name string) string {
 // endBlockHook returns a hook that is run at the end of every block.
 // It is used to process the events that were stored in the temp storage
 func (e EthListener) endBlockHook() hooks.EndBlockHook {
-	return func(ctx context.Context, app *common.App) error {
-		processed, err := e.tempStorageProc(ctx, app, "get_and_delete_ready", nil)
+	return func(ctx context.Context, app *common.App, kwilBlock *common.BlockContext) error {
+		processed, err := e.tempStorageProc(ctx, kwilBlock, app, "get_and_delete_ready", nil)
 		if err != nil {
 			return err
 		}
@@ -93,15 +101,12 @@ func (e EthListener) endBlockHook() hooks.EndBlockHook {
 }
 
 // tempStorageProc calls a procedure on the temp storage dataset
-func (e EthListener) tempStorageProc(ctx context.Context, app *common.App, procedure string, args []any) (*sql.ResultSet, error) {
-	return app.Engine.Procedure(ctx, app.DB, &common.ExecutionData{
-		TransactionData: common.TransactionData{
-			Signer: []byte(e.ExtensionName),
-			Caller: e.ExtensionName,
-			// TODO: we should include the comet blockheight for uniqueness here in v0.9
-			// it doesn't really matter for now, but it is a good practice
-			TxID: e.uniqueName(procedure),
-		},
+func (e EthListener) tempStorageProc(ctx context.Context, block *common.BlockContext, app *common.App, procedure string, args []any) (*sql.ResultSet, error) {
+	return app.Engine.Procedure(&common.TxContext{
+		Ctx:          ctx,
+		BlockContext: block,
+		TxID:         e.uniqueName(procedure),
+	}, app.DB, &common.ExecutionData{
 		Dataset:   tempStorageSchema.DBID(),
 		Procedure: procedure,
 		Args:      args,

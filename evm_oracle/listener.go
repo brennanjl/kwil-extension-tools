@@ -456,7 +456,7 @@ func (e EthListener) resolutionConfig() resolutions.ResolutionConfig {
 		RefundThreshold:       e.RefundThreshold,
 		ConfirmationThreshold: e.ConfirmationThreshold,
 		ExpirationPeriod:      e.ExpirationPeriod,
-		ResolveFunc: func(ctx context.Context, app *common.App, resolution *resolutions.Resolution) error {
+		ResolveFunc: func(ctx context.Context, app *common.App, resolution *resolutions.Resolution, kwilBlock *common.BlockContext) error {
 			block := blockData{}
 			err := serialize.Decode(resolution.Body, &block)
 			if err != nil {
@@ -470,7 +470,7 @@ func (e EthListener) resolutionConfig() resolutions.ResolutionConfig {
 				previous = int64(*block.Previous)
 			}
 
-			_, err = e.tempStorageProc(ctx, app, "store", []interface{}{block.Height, previous, resolution.Body})
+			_, err = e.tempStorageProc(ctx, kwilBlock, app, "store", []interface{}{block.Height, previous, resolution.Body})
 			if err != nil {
 				return fmt.Errorf("failed to store block: %w", err)
 			}
