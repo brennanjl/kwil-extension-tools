@@ -129,7 +129,7 @@ func (el EthListener) Listen(ctx context.Context, service *common.Service, event
 	logger := service.Logger.Named("eth_listener." + el.ExtensionName)
 	cfg := &Config{}
 
-	cfgMap, ok := service.ExtensionConfigs[el.ConfigName]
+	cfgMap, ok := service.LocalConfig.AppConfig.Extensions[el.ConfigName]
 	if !ok {
 		logger.Warn("no configuration found for listener, not running...")
 		return nil
