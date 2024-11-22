@@ -372,6 +372,7 @@ func (e EthListener) processEvents(ctx context.Context, from, to int64, client *
 			logger.Debug("skipping event with no topics", "tx_hash", log.TxHash, "block_number", log.BlockNumber, "log_index", log.Index)
 			continue
 		}
+		logger.Info("SYNC:", "Data", log.Data)
 		l2 := logCopy{
 			Address:     log.Address,
 			Topics:      log.Topics,
