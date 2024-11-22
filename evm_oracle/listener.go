@@ -387,8 +387,11 @@ func (e EthListener) processEvents(ctx context.Context, from, to int64, client *
 			Removed:     log.Removed,
 		}
 
+		_, ok := blocks[log.BlockNumber]
 		blocks[log.BlockNumber] = append(blocks[log.BlockNumber], l2)
-		blockOrder = append(blockOrder, log.BlockNumber)
+		if !ok {
+			blockOrder = append(blockOrder, log.BlockNumber)
+		}
 	}
 
 	lastUsed, err := getLastHeightWithEvent(ctx, eventStore)
@@ -418,8 +421,6 @@ func (e EthListener) processEvents(ctx context.Context, from, to int64, client *
 		if err != nil {
 			return err
 		}
-
-		logger.Info("broadcasting block", "height", block, "log_count", len(logs), "last_used", lastUsed)
 
 		err = eventStore.Broadcast(ctx, e.resolutionExtName(), bts)
 		if err != nil {
