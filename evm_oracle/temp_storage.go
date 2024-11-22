@@ -106,6 +106,8 @@ func (e EthListener) tempStorageProc(ctx context.Context, block *common.BlockCon
 		Ctx:          ctx,
 		BlockContext: block,
 		TxID:         e.uniqueName(procedure),
+		Signer:       []byte(e.ExtensionName),
+		Caller:       e.ExtensionName,
 	}, app.DB, &common.ExecutionData{
 		Dataset:   tempStorageSchema.DBID(),
 		Procedure: procedure,
