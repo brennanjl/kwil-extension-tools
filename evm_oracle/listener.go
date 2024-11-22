@@ -470,6 +470,8 @@ func (e EthListener) resolutionConfig() resolutions.ResolutionConfig {
 				previous = int64(*block.Previous)
 			}
 
+			app.Service.Logger.Info("resolving block", "height", block.Height, "previous", previous, "log_count", len(block.Logs))
+
 			_, err = e.tempStorageProc(ctx, kwilBlock, app, "store", []interface{}{block.Height, previous, resolution.Body})
 			if err != nil {
 				return fmt.Errorf("failed to store block: %w", err)
