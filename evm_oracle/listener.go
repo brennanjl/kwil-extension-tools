@@ -184,6 +184,8 @@ func (el EthListener) Listen(ctx context.Context, service *common.Service, event
 		startBlock = toBlock
 	}
 
+	service.Logger.Info("caught up with network", "from", el.StartHeight, "to", lastConfirmedBlock)
+
 	outerErr := client.ListenToBlocks(ctx, time.Duration(cfg.ReconnectionInterval)*time.Second, func(newHeight int64) error {
 		newHeight = newHeight - el.RequiredConfirmations
 
