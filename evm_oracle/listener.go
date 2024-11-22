@@ -419,6 +419,8 @@ func (e EthListener) processEvents(ctx context.Context, from, to int64, client *
 			return err
 		}
 
+		logger.Info("broadcasting block", "height", block, "log_count", len(logs), "last_used", lastUsed)
+
 		err = eventStore.Broadcast(ctx, e.resolutionExtName(), bts)
 		if err != nil {
 			return err
