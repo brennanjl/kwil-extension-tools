@@ -167,7 +167,9 @@ func (el EthListener) Listen(ctx context.Context, service *common.Service, event
 	// we will now sync all logs from the starting height to the current height,
 	// in chunks of config.BlockSyncChunkSize
 	for {
+		service.Logger.Info("SYNC: syncing blocks", "from", startBlock, "to", lastConfirmedBlock)
 		if startBlock >= lastConfirmedBlock {
+			service.Logger.Info("SYNC (BREAK): synced blocks", "from", startBlock, "to", lastConfirmedBlock)
 			break
 		}
 
@@ -182,6 +184,7 @@ func (el EthListener) Listen(ctx context.Context, service *common.Service, event
 		}
 
 		startBlock = toBlock
+		service.Logger.Info("SYNC (DONE): synced blocks", "from", startBlock, "to", lastConfirmedBlock)
 	}
 
 	service.Logger.Info("caught up with network", "from", el.StartHeight, "to", lastConfirmedBlock)
