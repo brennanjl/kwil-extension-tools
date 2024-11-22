@@ -89,7 +89,7 @@ func (e EthListener) endBlockHook() hooks.EndBlockHook {
 					BlockHash:   log.BlockHash,
 					Index:       log.Index,
 					Removed:     log.Removed,
-				})
+				}, kwilBlock)
 				if err != nil {
 					return err
 				}
