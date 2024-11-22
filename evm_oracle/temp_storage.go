@@ -9,6 +9,7 @@ import (
 	"github.com/kwilteam/kwil-db/common/sql"
 	"github.com/kwilteam/kwil-db/core/types"
 	"github.com/kwilteam/kwil-db/core/types/serialize"
+	"github.com/kwilteam/kwil-db/core/utils"
 	"github.com/kwilteam/kwil-db/extensions/hooks"
 	"github.com/kwilteam/kwil-db/parse"
 )
@@ -109,7 +110,7 @@ func (e EthListener) tempStorageProc(ctx context.Context, block *common.BlockCon
 		Signer:       []byte(e.ExtensionName),
 		Caller:       e.ExtensionName,
 	}, app.DB, &common.ExecutionData{
-		Dataset:   tempStorageSchema.DBID(),
+		Dataset:   utils.GenerateDBID(tempStorageSchema.Name, []byte(e.ExtensionName)),
 		Procedure: procedure,
 		Args:      args,
 	})
