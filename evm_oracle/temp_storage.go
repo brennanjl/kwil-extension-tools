@@ -3,6 +3,7 @@ package eth_oracle
 import (
 	"context"
 	_ "embed"
+	"fmt"
 
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/kwilteam/kwil-db/common"
@@ -65,17 +66,25 @@ func (e EthListener) uniqueName(name string) string {
 // It is used to process the events that were stored in the temp storage
 func (e EthListener) endBlockHook() hooks.EndBlockHook {
 	return func(ctx context.Context, app *common.App, kwilBlock *common.BlockContext) error {
-		processed, err := e.tempStorageProc(ctx, kwilBlock, app, "get_and_delete_ready", nil)
+		rows, err := e.tempStorageProc(ctx, kwilBlock, app, "get_and_delete_ready", nil)
 		if err != nil {
 			return err
 		}
 
-		for _, row := range processed.Rows {
+		var processed []*tempStorageRes
+		for _, row := range rows.Rows {
+			processed = append(processed, &tempStorageRes{
+				Height: row[0].(int64),
+				Data:   row[1].([]byte),
+			})
+		}
+
+		for _, row := range processed {
 			// first column is height, second is the rlp encoded log.
 			block := blockData{
-				Height: uint64(row[0].(int64)),
+				Height: uint64(row.Height),
 			}
-			if err := serialize.Decode(row[1].([]byte), &block); err != nil {
+			if err := serialize.Decode(row.Data, &block); err != nil {
 				return err
 			}
 
@@ -99,6 +108,96 @@ func (e EthListener) endBlockHook() hooks.EndBlockHook {
 
 		return nil
 	}
+}
+
+type tempStorageRes struct {
+	Height int64
+	Data   []byte
+}
+
+// getAndDeleteReady calls the get_and_delete_ready procedure on the temp storage dataset
+func (e EthListener) getAndDeleteReady(ctx context.Context, block *common.BlockContext, app *common.App) ([]*tempStorageRes, error) {
+	q := querier{
+		e:   &e,
+		c:   app,
+		b:   block,
+		ctx: ctx,
+	}
+
+	res, err := q.Query("SELECT height FROM last_processed", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(res.Rows) != 1 {
+		return nil, fmt.Errorf("expected 1 row, got %d", len(res.Rows))
+	}
+
+	height := res.Rows[0][0].(int64)
+
+	res, err = q.Query("SELECT height, previous_height, data FROM data WHERE height > $last_processed_height ORDER BY height ASC", map[string]any{
+		"$last_processed_height": height,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(res.Rows) == 0 {
+		return nil, nil
+	}
+
+	var results []*tempStorageRes
+
+	for _, row := range res.Rows {
+		if row[1].(int64) != height {
+			_, err = q.Query("UPDATE last_processed SET height = $new_height", map[string]any{
+				"$new_height": row[1],
+			})
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+
+		_, err = q.Query("DELETE FROM data WHERE height = $height", map[string]any{
+			"$height": row[0],
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		height = row[0].(int64)
+		results = append(results, &tempStorageRes{
+			Height: row[0].(int64),
+			Data:   row[2].([]byte),
+		})
+	}
+
+	_, err = q.Query("UPDATE last_processed SET height = $new_height", map[string]any{
+		"$new_height": height,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return results, err
+}
+
+type querier struct {
+	e   *EthListener
+	c   *common.App
+	b   *common.BlockContext
+	ctx context.Context
+}
+
+func (q querier) Query(query string, vals map[string]any) (*sql.ResultSet, error) {
+	return q.c.Engine.Execute(&common.TxContext{
+		Ctx:          q.ctx,
+		BlockContext: q.b,
+		TxID:         q.e.uniqueName("a"),
+		Signer:       []byte(q.e.ExtensionName),
+		Caller:       q.e.ExtensionName,
+	}, q.c.DB, utils.GenerateDBID(tempStorageSchema.Name, []byte(q.e.ExtensionName)), query, vals)
 }
 
 // tempStorageProc calls a procedure on the temp storage dataset

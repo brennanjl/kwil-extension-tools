@@ -51,4 +51,6 @@ procedure get_and_delete_ready() public owner returns table(height int, data blo
 
         return next $r2.height, $r2.data;
     }
+
+    update last_processed set height = $last_processed_height;
 }
